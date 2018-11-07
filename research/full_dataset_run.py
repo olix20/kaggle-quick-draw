@@ -2,54 +2,40 @@
 # coding: utf-8
 
 from utils import *
-from models import *
+from experiments import *
 from qd_data import *
-from augmentations import *
+from augmentations import * 
+from models import *
 
+	
+def run_experiment():
 
-import numpy as np
-import gc
-import keras
+	imsize=96  
+	batch_size=64
+	fold = 9 #np.random.choice( range(1,10))
+#CRNN_2d_generator) #QD_Datagen_Sample)	
 
-from keras.applications.mobilenet_v2 import MobileNetV2
-from keras.optimizers import Adam
+	name = "something"
+	exp_name = f"{name}_im{imsize}_batch_{batch_size}_fold{fold}_nonrec"
 
+	model, preprocess_input = get_mnet_pretrained(imsize)
 
-classfiles = glob(train_path+"*.csv")
-nametoid = {v[:-4].split("/")[-1].replace(" ", "_") :i
-							 for i, v in enumerate(classfiles) if "df_all_raw" not in v} #adds underscores
-idtoname = {i: v[:-4].split("/")[-1].replace(" ", "_")
-							 for i, v in enumerate(classfiles) if "df_all_raw" not in v} #adds underscores
+	exp = Experiment_Sample(
+		imsize, batch_size, exp_name, 
+		data_generator=CNN2D_generator, 
+		preprocess_input=preprocess_input) 
 
-
-def load_train_valid(fold):
-	print ("loading data..")
-
-	df_all = pd.read_csv(data_path+"df_all_nonrec.csv")
-
-	_10fold0 = load_obj("../data/folds10_nonrec.pik")[fold]
-	train_index = _10fold0["train_index"]
-	valid_index = _10fold0["test_index"]
-	# valid_df = df_all.iloc[valid_index] #pd.read_csv("../data/valid_df.csv")
-	# train_df = df_all.iloc[train_index]
-	# del df_all
-	# gc.collect()
-	return df_all.iloc[train_index], df_all.iloc[valid_index]
-
-
-def run_model(exp_name, model, train_df, valid_df,imsize, batch_size):
-	print(f"Beginning training for {exp_name}")
-	exp = Experiment(imsize, batch_size, exp_name)	
-	exp.train(model,train_df,valid_df,continue_training=True,do_aug=False)
-	exp.predict()
-	del exp
-
-
-def exp_im128():
-	imsize=128  
-	batch_size=128
-	fold = 8 #np.random.choice( range(1,10))
 	train_df, valid_df = load_train_valid(fold)
+	print(f"Beginning training for {exp_name}")
+
+	exp.train(model,train_df,valid_df, continue_training=True)		
+	
+	# exp.predict()
+
+
+if __name__ == '__main__':
+	run_experiment()
+
 
 	# ("resnet50",keras.applications.resnet50.ResNet50(input_shape=(imsize, imsize, 1), weights=None, classes=num_classes)),
 	# ("inception_resnet_v2",keras.applications.InceptionResNetV2(input_shape=(imsize, imsize, 1),  weights=None, classes=num_classes))
@@ -58,11 +44,36 @@ def exp_im128():
 	# ("inception_resnet_v2_augv2",keras.applications.InceptionResNetV2(input_shape=(imsize, imsize, 1),  weights=None, classes=num_classes))
 	# ("MobileNetV2_augv2", MobileNetV2(input_shape=(imsize, imsize, 1),  weights=None, classes=num_classes))
 # ("DenseNet169_augv2",keras.applications.densenet.DenseNet169(input_shape=(imsize, imsize, 1),  weights=None, classes=num_classes))	
-	models = [("MobileNetV2_noaug", MobileNetV2(input_shape=(imsize, imsize, 1),  weights=None, classes=num_classes))]
-	
-	for (name, model) in models:
-		exp_name = f"{name}_im{imsize}_fold{fold}_nonrec"
-		run_model(exp_name, model,train_df,valid_df,imsize,batch_size)		
+	# models = [("multibranch_inception_noaug", None)] #get_multibranch_inception(imsize))]
+	# models = [("inception_imagenet_noaug", None)]#get_incresnetv2_imagenet(imsize))] 
+	# models  = [("mnet_imagenet", None)]#get_mnet_pretrained(imsize))]
 
-if __name__ == '__main__':
-	exp_im128()
+
+
+
+# def run_model(exp_name, model, train_df, valid_df,imsize, batch_size):
+# 	print(f"Beginning training for {exp_name}")
+
+# 	exp = Experiment_Sample(imsize, batch_size, 
+# 	exp_name, data_generator=CNN2D_generator, preprocess_input=keras.applications.mobilenet_v2.preprocess_input) #CRNN_2d_generator) #QD_Datagen_Sample)	
+# 	# densenet
+# 	exp.train(model,train_df,valid_df, continue_training=True, do_aug=False, 
+# 		)		
+	
+# 	# exp = Experiment(imsize, batch_size, exp_name)	
+# 	# exp.train(model,train_df,valid_df,continue_training=True,do_aug=False)
+# 	exp.predict()
+# 	del exp
+
+
+# def exp_im128():
+# 	imsize=96  
+# 	batch_size=64
+# 	fold = 9 #np.random.choice( range(1,10))
+
+
+# 	train_df, valid_df = load_train_valid(fold)
+	
+# 	for (name, model) in models:
+# 		exp_name = f"{name}_im{imsize}_batch_{batch_size}_fold{fold}_nonrec"
+# 		run_model(exp_name, model,train_df,valid_df,imsize,batch_size)	

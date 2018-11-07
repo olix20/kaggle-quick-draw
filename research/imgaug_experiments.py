@@ -11,14 +11,6 @@ from keras.optimizers import Adam
 
 
 
-def load_sample_set():
-	print ("loading sample data based on fold8, nonrec..")
-	samplel_df_fold8 = pd.read_csv("../data/sample_df_nonrec_fold8.csv")
-	valid_df_fold8 = pd.read_csv("../data/valid_df_nonrec_fold8.csv")
-
-	print("training set size:",samplel_df_fold8.shape)
-	return samplel_df_fold8, valid_df_fold8
-
 
 def aug_test():
 	imsize=64  
@@ -27,45 +19,14 @@ def aug_test():
 	train_df, valid_df = load_sample_set()
 
 
-	# mobileNetV2_imgnet = get_model_with_imagenet_weights(MobileNetV2(include_top=False,weights='imagenet', input_shape=(imsize, imsize, 1)))
-# ,
-# 	("mobileNetV2_imgnet_sample_noaug",mobileNetV2_imgnet)
-
-	# models = [("MobileNetV2_noweight_sample_noaug",MobileNetV2(input_shape=(imsize, imsize, 1),  weights=None, classes=num_classes))]
-
-
-	# for (name, model) in models:
-	# 	exp_name = f"{name}_im{imsize}_fold{fold}_nonrec"
-	# 	print(f"Beginning training for {exp_name}")
-	# 	exp = Experiment_Sample(imsize, batch_size, exp_name)	
-	# 	exp.train(model,train_df,valid_df, stroke_aug_fn=None, iaa_seq=None)		
-	# 	# run_model(exp_name, model,train_df,valid_df,imsize,batch_size)	
-
-
 	model = MobileNetV2(input_shape=(imsize, imsize, 1),  weights=None, classes=num_classes)
 	name = "MobileNetV2_noweight_sample"
-
-	# exp_name = f"{name}_im{imsize}_fold{fold}_nonrec_" + "hflip"
-	# print(f"Beginning training for {exp_name}")
-	# exp = Experiment_Sample(imsize, batch_size, exp_name)	
-	# exp.train(model,train_df,valid_df, stroke_aug_fn=None, iaa_seq=simple_hr_flip())		
-
-	# # random vertix drop > rvd
-	# exp_name = f"{name}_im{imsize}_fold{fold}_nonrec_" + "rvd"
-	# print(f"Beginning training for {exp_name}")
-	# exp = Experiment_Sample(imsize, batch_size, exp_name)	
-	# exp.train(model,train_df,valid_df, stroke_aug_fn=random_vertex_drop, iaa_seq=None)		
 
 	exp_name = f"{name}_im{imsize}_fold{fold}_nonrec_rerun256" + "iaarot10"
 	print(f"Beginning training for {exp_name}")
 	exp = Experiment_Sample(imsize, batch_size, exp_name)	
 	exp.train(model,train_df,valid_df, stroke_aug_fn=None, iaa_seq=rotation10(),do_aug=True)		
 
-
-	exp_name = f"{name}_im{imsize}_fold{fold}_nonrec_rerun256" + "_noaug"
-	print(f"Beginning training for {exp_name}")
-	exp = Experiment_Sample(imsize, batch_size, exp_name)	
-	exp.train(model,train_df,valid_df, stroke_aug_fn=None, iaa_seq=None,do_aug=True)	
 
 
 
