@@ -5,7 +5,7 @@ def get_mnet_pretrained(imsize, freeze=True):
 		input_shape=(imsize, imsize, 3), alpha=1.,  weights="imagenet",
 		pooling="max", classes=num_classes, include_top=False)
 
-	model = get_model_with_imagenet_weights(mnet_raw)
+	model = get_model_with_imagenet_weights(mnet_raw, freeze)
 	preprocess_input = keras.applications.mobilenet_v2.preprocess_input
 
 	return model , preprocess_input
@@ -16,7 +16,7 @@ def get_incresnetv2_imagenet(imsize, freeze=True):
 		input_shape=(imsize, imsize, 3), include_top=False,
 	  weights="imagenet", pooling="max",  classes=num_classes)
 	
-	model = get_model_with_imagenet_weights(raw)
+	model = get_model_with_imagenet_weights(raw, freeze)
 	preprocess_input = keras.applications.inception_resnet_v2.preprocess_input
 
 	return model, preprocess_input
@@ -27,7 +27,7 @@ def get_densenet_121_imagenet(imsize, freeze=True):
 		include_top=False, pooling="max", 
 	  weights="imagenet", classes=num_classes)
 
-	model = get_model_with_imagenet_weights(densenet_raw)
+	model = get_model_with_imagenet_weights(densenet_raw, freeze)
 	preprocess_input = keras.applications.densenet.preprocess_input
 
 	return model, preprocess_input
@@ -37,7 +37,7 @@ def get_incresnetv2_imagenet(imsize, freeze=True):
 	raw = keras.applications.inception_resnet_v2.InceptionResNetV2(input_shape=(imsize, imsize, 3), include_top=False,
 	  weights="imagenet", classes=num_classes)
 
-	model = get_model_with_imagenet_weights(raw)
+	model = get_model_with_imagenet_weights(raw, freeze)
 	preprocess_input = keras.applications.inception_resnet_v2.preprocess_input
 
 	return model, preprocess_input
@@ -78,6 +78,6 @@ def get_multi_branch_mobilenet_crnn1d(imsize):
 	print(model.summary())
 
 
-	return model 
+	return model ,  keras.applications.inception_resnet_v2.preprocess_input
 
 

@@ -7,13 +7,36 @@ class Experiment_Sample:
 				 batch_size, 
 				 exp_name,
 				 data_generator=QD_Datagen_Sample,
-				 preprocess_input=keras.applications.mobilenet_v2.preprocess_input):
+				 preprocess_input=None,
+				 min_lr=1e-5,
+				 num_workers = None 
+				 ):
 		
 		self.imsize = imsize
 		self.batch_size = batch_size
 		self.exp_name = exp_name     
 		self.data_generator = data_generator
 		self.preprocess_input = preprocess_input
+		self.min_lr = min_lr
+		self.num_workers = num_workers
+		self.num_workers = self.num_workers or os.cpu_count()//2 - 1
+
+	def fit_gen(self, num_epochs=100):
+
+		# self.parallel_model.__setattr__('callback_model', self.model)
+		callbacks = self.get_callbacks(self.exp_name, self.batch_size)
+
+		self.model.fit_generator(self.train_gen,
+			 steps_per_epoch=len(self.train_gen),
+			 epochs = num_epochs,
+			 validation_data = self.valid_gen,
+			 validation_steps=len(self.valid_gen),  
+			 callbacks = callbacks,
+			 verbose = 1, 
+			 workers=self.num_workers, 
+			 max_queue_size=50,
+			 use_multiprocessing=True) 
+
 
 	def train(self, 
 			  model,
@@ -26,10 +49,10 @@ class Experiment_Sample:
 			 preprocess_input=None, 
 			 lr=None, 
 			 reduce_lr_mode="sample",
-			 num_workers = None ):
+			 finetune=False):
 		
 		self.model = model
-  		self.preprocess_input = preprocess_input or self.preprocess_input
+		self.preprocess_input = preprocess_input or self.preprocess_input
 
 		self.train_gen = self.data_generator(
 			train_df.drawing,
@@ -49,7 +72,6 @@ class Experiment_Sample:
 			imsize=self.imsize,
 			preprocess_input=self.preprocess_input) 
 		
-
 		# continue training from a broken run, this loads last state of optimizer too!
 		last_model = sorted(glob(f"/home/ubuntu/draw/weights/{self.exp_name}*.hdf5"), 
 			key=os.path.getmtime,reverse=True)		
@@ -68,7 +90,7 @@ class Experiment_Sample:
 		else:
 			# important to put this under else condition otherwise learning rate will be reset
 			self.model.compile(loss='categorical_crossentropy',
-			  optimizer=Adam(lr=2*1e-4),
+			  optimizer=Adam(lr=1e-3),
 			  metrics=['accuracy', self.top_3_accuracy])   			
 
 		# override lr if specified
@@ -78,21 +100,23 @@ class Experiment_Sample:
 			  metrics=['accuracy', self.top_3_accuracy]) 
 
 
-		# self.parallel_model.__setattr__('callback_model', self.model)
-		callbacks = self.get_callbacks(self.exp_name, self.batch_size,reduce_lr_mode)
-		num_workers = num_workers or os.cpu_count()//2 -1
-		print ("num_workers:", num_workers)
+		if not finetune:
+			self.fit_gen(num_epochs=100)
 
-		self.model.fit_generator(self.train_gen,
-			 steps_per_epoch=len(self.train_gen)//(self.batch_size),
-			 epochs = 100,
-			 validation_data = self.valid_gen,
-			 validation_steps=np.ceil(len(self.valid_gen)/(self.batch_size)), #10,  
-			 callbacks = callbacks,
-			 verbose = 1, 
-			 workers=os.cpu_count()//2-1, 
-			 max_queue_size=100,
-			 use_multiprocessing=True) 
+		else:
+			# first train top layers
+			self.fit_gen(num_epochs=10)
+
+			# unfreeze lower layers and retrain
+			for layer in self.model.layers:
+				layer.trainable = True				
+
+			self.model.compile(loss='categorical_crossentropy',
+			  optimizer=Adam(lr=2e-4),
+			  metrics=['accuracy', self.top_3_accuracy]) 
+
+			self.fit_gen(num_epochs=100)
+
 		
 
 	def predict(self):
@@ -130,7 +154,7 @@ class Experiment_Sample:
 
 	def get_callbacks(self, exp_name, batch_size):
 		reduceLROnPlat = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=3, 
-										   verbose=1, mode='auto', min_delta=0.01, min_lr=1e-5)
+										   verbose=1, mode='auto', min_delta=0.01, min_lr=self.min_lr)
 		# earlystop = EarlyStopping(monitor='val_top_3_accuracy', mode='max', patience=5) 
 		earlystop = EarlyStopping(monitor='val_loss', mode='min', patience=5) 
 
@@ -141,8 +165,7 @@ class Experiment_Sample:
 								 save_weights_only=False,
 								 mode='min')
 		csv_logger = CSVLogger('/home/ubuntu/draw/logs/csv/{}_train_log.csv'.format(exp_name))
-		# tb_callback = TensorBoard(log_dir='/home/ubuntu/draw/logs/tensor_board/', 
-		# 			histogram_freq=0, batch_size=batch_size, write_graph=True, write_grads=False, write_images=False)
+
 		callbacks = [reduceLROnPlat, earlystop, save_best,csv_logger]
 		return callbacks
 
@@ -169,6 +192,9 @@ class Experiment_Sample:
 #             self.model = model
 
 
+
+		# tb_callback = TensorBoard(log_dir='/home/ubuntu/draw/logs/tensor_board/', 
+		# 			histogram_freq=0, batch_size=batch_size, write_graph=True, write_grads=False, write_images=False)
 
 
 

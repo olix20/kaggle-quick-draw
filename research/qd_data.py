@@ -342,6 +342,50 @@ class BaseGenerator(Sequence):
 
 class RNN_1d_generator(BaseGenerator):
 
+	def __getitem__(self, idx):
+		batch_x = self.x[idx * self.batch_size:(idx + 1) * self.batch_size]
+		batch_y = self.y[idx * self.batch_size:(idx + 1) * self.batch_size]
+
+		# images = np.array([self.draw_it(strokes) for strokes in batch_x])
+		points = np.array([self.get_point_seqx3(strokes) for strokes in batch_x])
+		# strokes = np.array([self.get_point_sequence(strokes) for strokes in batch_x])
+
+		return points, keras.utils.to_categorical(batch_y, num_classes)
+
+
+
+class CRNN_2d_generator(BaseGenerator):
+
+	def __getitem__(self, idx):
+		batch_x = self.x[idx * self.batch_size:(idx + 1) * self.batch_size]
+		batch_y = self.y[idx * self.batch_size:(idx + 1) * self.batch_size]
+
+		images = np.array([self.draw_it_3channel_infoplus(strokes) for strokes in batch_x])
+		points = np.array([self.get_point_seqx3(strokes) for strokes in batch_x])
+		# strokes = np.array([self.get_discrete_stroke_sequence(strokes) for strokes in batch_x])
+
+		return [points,images], keras.utils.to_categorical(batch_y, num_classes)
+
+
+class CNN2D_generator(BaseGenerator): #
+	
+	def __getitem__(self, idx):
+		batch_x = self.x[idx * self.batch_size:(idx + 1) * self.batch_size]
+		batch_y = self.y[idx * self.batch_size:(idx + 1) * self.batch_size]
+		images = np.array([self.draw_it_3channel_infoplus(strokes) for strokes in batch_x])
+
+		return images, keras.utils.to_categorical(batch_y, num_classes)
+	
+# duplicate  of CNN2D_generator for backward compatibility
+class QD_Datagen_Sample(BaseGenerator): 
+	
+	def __getitem__(self, idx):
+		batch_x = self.x[idx * self.batch_size:(idx + 1) * self.batch_size]
+		batch_y = self.y[idx * self.batch_size:(idx + 1) * self.batch_size]
+		images = np.array([self.draw_it_3channel_infoplus(strokes) for strokes in batch_x])
+
+		return images, keras.utils.to_categorical(batch_y, num_classes)
+
 
 	# def get_point_sequence(self, strokes):
 	# 	points = []
@@ -363,53 +407,6 @@ class RNN_1d_generator(BaseGenerator):
 	# 		points = np.vstack([points,pad])
 
 	# 	return points
-
-
-	def __getitem__(self, idx):
-		batch_x = self.x[idx * self.batch_size:(idx + 1) * self.batch_size]
-		batch_y = self.y[idx * self.batch_size:(idx + 1) * self.batch_size]
-
-		# images = np.array([self.draw_it(strokes) for strokes in batch_x])
-		points = np.array([super().get_point_seqx3(strokes) for strokes in batch_x])
-		# strokes = np.array([self.get_point_sequence(strokes) for strokes in batch_x])
-
-		return points, keras.utils.to_categorical(batch_y, num_classes)
-
-
-
-class CRNN_2d_generator(BaseGenerator):
-
-	def __getitem__(self, idx):
-		batch_x = self.x[idx * self.batch_size:(idx + 1) * self.batch_size]
-		batch_y = self.y[idx * self.batch_size:(idx + 1) * self.batch_size]
-
-		images = np.array([super().draw_it_3channel_infoplus(strokes) for strokes in batch_x])
-		points = np.array([super().get_point_seqx3(strokes) for strokes in batch_x])
-		# strokes = np.array([self.get_discrete_stroke_sequence(strokes) for strokes in batch_x])
-
-		return [points,images], keras.utils.to_categorical(batch_y, num_classes)
-
-
-class CNN2D_generator(BaseGenerator): #
-	
-	def __getitem__(self, idx):
-		batch_x = self.x[idx * self.batch_size:(idx + 1) * self.batch_size]
-		batch_y = self.y[idx * self.batch_size:(idx + 1) * self.batch_size]
-		images = np.array([super().draw_it_3channel_infoplus(strokes) for strokes in batch_x])
-
-		return images, keras.utils.to_categorical(batch_y, num_classes)
-	
-# duplicate  of CNN2D_generator for backward compatibility
-class QD_Datagen_Sample(BaseGenerator): 
-	
-	def __getitem__(self, idx):
-		batch_x = self.x[idx * self.batch_size:(idx + 1) * self.batch_size]
-		batch_y = self.y[idx * self.batch_size:(idx + 1) * self.batch_size]
-		images = np.array([super().draw_it_3channel_infoplus(strokes) for strokes in batch_x])
-
-		return images, keras.utils.to_categorical(batch_y, num_classes)
-
-
 
 
 
