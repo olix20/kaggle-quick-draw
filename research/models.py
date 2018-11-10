@@ -1,11 +1,35 @@
 from utils import *
 
-def get_mnet_pretrained(imsize, freeze=True):
+def get_mnet_1d(imsize, alpha=1.4):
 	mnet_raw = MobileNetV2(
-		input_shape=(imsize, imsize, 3), alpha=1.,  weights="imagenet",
+		input_shape=(imsize, imsize, 1), alpha=alpha,
+		pooling="max", classes=num_classes, weights=None, include_top=False)
+
+	model = get_model_with_imagenet_weights(mnet_raw, freeze=False)
+	preprocess_input = keras.applications.mobilenet_v2.preprocess_input
+
+	return model , preprocess_input
+
+
+
+def get_mnet_pretrained(imsize, freeze=True, alpha=1.0):
+	mnet_raw = MobileNetV2(
+		input_shape=(imsize, imsize, 3), alpha=alpha,  weights="imagenet",
 		pooling="max", classes=num_classes, include_top=False)
 
 	model = get_model_with_imagenet_weights(mnet_raw, freeze)
+	preprocess_input = keras.applications.mobilenet_v2.preprocess_input
+
+	return model , preprocess_input
+
+
+
+def get_mnet_2d_raw(imsize, alpha=1.4):
+	mnet_raw = MobileNetV2(
+		input_shape=(imsize, imsize, 3), alpha=alpha, 
+		pooling="max", classes=num_classes, include_top=False, weights=None)
+
+	model = get_model_with_imagenet_weights(mnet_raw, freeze=False)
 	preprocess_input = keras.applications.mobilenet_v2.preprocess_input
 
 	return model , preprocess_input
@@ -33,12 +57,12 @@ def get_densenet_121_imagenet(imsize, freeze=True):
 	return model, preprocess_input
 
 
-def get_incresnetv2_imagenet(imsize, freeze=True):
-	raw = keras.applications.inception_resnet_v2.InceptionResNetV2(input_shape=(imsize, imsize, 3), include_top=False,
+def get_resnet_imagenet(imsize, freeze=True):
+	raw = keras.applications.resnet50.ResNet50(input_shape=(imsize, imsize, 3), include_top=False,
 	  weights="imagenet", classes=num_classes)
 
 	model = get_model_with_imagenet_weights(raw, freeze)
-	preprocess_input = keras.applications.inception_resnet_v2.preprocess_input
+	preprocess_input = keras.applications.resnet50.preprocess_input
 
 	return model, preprocess_input
 

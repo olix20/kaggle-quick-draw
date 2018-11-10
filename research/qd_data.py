@@ -74,26 +74,6 @@ class BaseGenerator(Sequence):
 			
 		return np.reshape(image,image.shape+(1,))
 
-
-	# def draw_it(self, strokes):
-
-	# 	image = Image.new("P", (300,300), color=255)
-	# 	image_draw = ImageDraw.Draw(image)
-
-	# 	offset = (300-256)//2
-
-	# 	for stroke in ast.literal_eval(strokes):
-	# 		for i in range(len(stroke[0])-1):
-	# 			image_draw.line([stroke[0][i]+offset, 
-	# 							 stroke[1][i]+offset,
-	# 							 stroke[0][i+1]+offset, 
-	# 							 stroke[1][i+1]+offset],
-	# 							fill=0, width=5)
-				
-	# 	image = image.resize(( self.imsize,  self.imsize))
-	# 	image = np.array(image)/255.
-				
-	# 	return np.reshape(image,image.shape+(1,))
 	
 	def draw_it(self,strokes):
 
@@ -367,7 +347,7 @@ class CRNN_2d_generator(BaseGenerator):
 		return [points,images], keras.utils.to_categorical(batch_y, num_classes)
 
 
-class CNN2D_generator(BaseGenerator): #
+class CNN2D_generator(BaseGenerator):
 	
 	def __getitem__(self, idx):
 		batch_x = self.x[idx * self.batch_size:(idx + 1) * self.batch_size]
@@ -375,139 +355,3 @@ class CNN2D_generator(BaseGenerator): #
 		images = np.array([self.draw_it_3channel_infoplus(strokes) for strokes in batch_x])
 
 		return images, keras.utils.to_categorical(batch_y, num_classes)
-	
-# duplicate  of CNN2D_generator for backward compatibility
-class QD_Datagen_Sample(BaseGenerator): 
-	
-	def __getitem__(self, idx):
-		batch_x = self.x[idx * self.batch_size:(idx + 1) * self.batch_size]
-		batch_y = self.y[idx * self.batch_size:(idx + 1) * self.batch_size]
-		images = np.array([self.draw_it_3channel_infoplus(strokes) for strokes in batch_x])
-
-		return images, keras.utils.to_categorical(batch_y, num_classes)
-
-
-	# def get_point_sequence(self, strokes):
-	# 	points = []
-	# 	count = 0 
-	# 	max_length = 196
-	# 	for stroke in ast.literal_eval(strokes):
-	# 		for i in range(len(stroke[0])):
-	# 			if count < max_length:
-	# 				points.append(
-	# 					[stroke[0][i], stroke[1][i]])   
-
-	# 				count += 1
-
-	# 	points = np.array(points)
-	# 	if count < max_length:
-	# 		pad_length = max_length - count
-	# 		pad = np.zeros((pad_length,2))
-	# 		pad = np.array(pad)
-	# 		points = np.vstack([points,pad])
-
-	# 	return points
-
-
-
-
-# class QD_Datagen(Sequence):
-# 	def __init__(self, x_set, y_set, batch_size, imsize, is_train_mode=False):
-# 		self.x, self.y = x_set, y_set
-# 		self.batch_size = batch_size
-# 		self.is_train_mode = is_train_mode
-# 		self.imsize = imsize
-
-# 	def __len__(self):
-# 		return int(np.ceil(len(self.x) / float(self.batch_size)))
-	
-# 	def get_augmented_strokes(self, strokes, prob=0.1):
-# 		augmented = []
-# 		for stroke in ast.literal_eval(strokes):
-# 			if len(stroke[0]) < 3 : 
-# 				augmented.append(stroke)
-# 				continue
-# 			else:
-# 				new_stroke =[[],[]]
-# 				for i in range(0,len(stroke[0])):
-# 					if i > 0 and i < len(stroke[0])-1:
-# 						if np.random.rand() < prob:
-# 							# print("skipping adding item")
-# 							continue 
-# 						if np.random.rand() < prob:
-# 							# print("adjusting stroke by a random number")
-# 							delta_x = np.random.randint(-5,5)
-# 							delta_y = np.random.randint(-5,5)
-# 							stroke[0][i] += delta_x
-# 							stroke[1][i] += delta_y
-							
-# 					new_stroke[0].append(stroke[0][i])
-# 					new_stroke[1].append(stroke[1][i])
-				
-# 				augmented.append(new_stroke)
-# 		return str(augmented)
-
-# 	def draw_it(self,strokes):
-
-# 		# if self.is_train_mode:
-# 		# 	strokes = self.get_augmented_strokes(strokes)
-		
-# 		image = Image.new("P", (256,256), color=255)
-# 		image_draw = ImageDraw.Draw(image)
-# 		for stroke in ast.literal_eval(strokes):
-# 			for i in range(len(stroke[0])-1):
-# 				image_draw.line([stroke[0][i], 
-# 								 stroke[1][i],
-# 								 stroke[0][i+1], 
-# 								 stroke[1][i+1]],
-# 								fill=0, width=5)
-				
-# 		image = image.resize(( self.imsize,  self.imsize))
-# 		image = np.array(image)/255.
-		
-# 		return np.reshape(image,image.shape+(1,))
-	
-	
-# 	def get_full_image_array(self):
-# 		imagebag = bag.from_sequence(
-# 			self.x,
-# 			npartitions=os.cpu_count()-1).map(lambda x: self.draw_it(x))      
-# 		raw_images = np.array(imagebag.compute())
-		
-# 		return raw_images
-# #         return np.array([
-# #             self.draw_it(strokes) for strokes in self.x])
-		
-# 	def __getitem__(self, idx):
-# 		batch_x = self.x[idx * self.batch_size:(idx + 1) * self.batch_size]
-# 		batch_y = self.y[idx * self.batch_size:(idx + 1) * self.batch_size]
-		
-# 		images = np.array([
-# 			self.draw_it(strokes) for strokes in batch_x])
-		
-# 		# do augmentation
-# 		if self.is_train_mode:
-# 			# # sometimes = lambda aug: iaa.Sometimes(0.5, aug)
-# 			# seq = iaa.Sequential([
-# 			# 	iaa.Fliplr(0.5) # horizontally flip 50% of the images    
-# 			# # 	sometimes(iaa.Affine(
-# 			# # 		translate_percent={"x": (-0.1, 0.1), "y": (-0.1, 0.1)}, # translate by -10 to +10 percent (per axis)
-# 			# # #         rotate=(-10, 10), # rotate by -45 to +45 degrees
-# 			# # #         shear=(-1, 1), # shear by -16 to +16 degrees
-# 			# # 		cval=1
-# 			# # 	))   
-# 			# 	])
-# 			sometimes = lambda aug: iaa.Sometimes(0.5, aug)
-# 			seq = iaa.Sequential([
-# 				iaa.Fliplr(0.5),
-# 				iaa.Flipud(0.2),
-# 				sometimes(iaa.Affine(scale={"y": (0.8, 1.2)} ,  cval=1)),
-# 				sometimes(iaa.Affine(translate_percent={"x": (-0.05, 0.05), "y": (-0.05, 0.05)},cval=1)),
-# 				sometimes(iaa.Affine(shear=(-5, 5),  cval=1)),
-# 				sometimes(iaa.Affine(rotate=(-10, 10),  cval=1))
-# 				])			
-# 			images = seq.augment_images(images)
-
-# 		return images, keras.utils.to_categorical(batch_y, num_classes)
-	
-
