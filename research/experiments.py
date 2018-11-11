@@ -32,7 +32,7 @@ class GZ_experiment:
 
 
 		print("loading valid df .. ")
-		valid_df = pd.read_csv(os.path.join(DP_DIR, 'train_k{}.csv.gz'.format(NCSVS - 1)), nrows=140000)
+		valid_df = pd.read_csv(os.path.join(DP_DIR, 'train_k{}.csv.gz'.format(NCSVS - 1)  ), nrows=140000) #
 		x_valid = df_to_image_array_xd(valid_df, self.imsize,preprocess_input=self.preprocess_input)
 		y_valid = keras.utils.to_categorical(valid_df.y, num_classes=NCATS)
 		print(x_valid.shape, y_valid.shape)
@@ -77,9 +77,9 @@ class GZ_experiment:
 			 validation_data = (x_valid, y_valid),
 			 callbacks = callbacks,
 			 verbose = 1, 
-			 workers=self.num_workers, 
+			 workers=1, #self.num_workers, 
 			 max_queue_size=100,
-			 use_multiprocessing=True) 
+			 use_multiprocessing=False) 
 		
 
 	def top_3_accuracy(self, x,y): 
@@ -87,9 +87,9 @@ class GZ_experiment:
 		return t3
 
 	def get_callbacks(self, exp_name, batch_size):
-		reduceLROnPlat = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, cooldown=3, verbose=1,
+		reduceLROnPlat = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=10, cooldown=3, verbose=1,
 										   mode='auto', min_delta=0.005, min_lr=self.min_lr)
-		earlystop = EarlyStopping(monitor='val_top_3_accuracy', mode='max', patience=8) 
+		earlystop = EarlyStopping(monitor='val_top_3_accuracy', mode='max', patience=15) 
 		# earlystop = EarlyStopping(monitor='val_loss', mode='min', patience=5) 
 
 		exp_path = f'/home/ubuntu/draw/weights/{exp_name}.hdf5'
@@ -119,7 +119,7 @@ class GZ_experiment_1d(GZ_experiment):
 
 
 		print("loading valid df .. ")
-		valid_df = pd.read_csv(os.path.join(DP_DIR, 'train_k{}.csv.gz'.format(NCSVS - 1)), nrows=140000)
+		valid_df = pd.read_csv(os.path.join(DP_DIR, 'train_k{}.csv.gz'.format(NCSVS - 1))) # nrows=140000
 		x_valid = df_to_image_array_1d(valid_df, self.imsize,preprocess_input=self.preprocess_input)
 		y_valid = keras.utils.to_categorical(valid_df.y, num_classes=NCATS)
 		print(x_valid.shape, y_valid.shape)

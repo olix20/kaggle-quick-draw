@@ -196,10 +196,11 @@ def draw_cv2(raw_strokes, size=256, lw=6, time_color=True):
 		return img
 
 
-
+# @threadsafe_generator
 def image_generator_xd(size, batchsize, ks, lw=6, time_color=True, preprocess_input=None):
 	while True:
 		for k in np.random.permutation(ks):
+			print("k: ",k)
 			filename = os.path.join("../data/csv_gz", 'train_k{}.csv.gz'.format(k))
 			for df in pd.read_csv(filename, chunksize=batchsize):
 				df['drawing'] = df['drawing'].apply(json.loads)

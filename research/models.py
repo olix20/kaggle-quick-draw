@@ -11,6 +11,26 @@ def get_mnet_1d(imsize, alpha=1.4):
 	return model , preprocess_input
 
 
+def get_exception_1d(imsize):
+	mnet_raw = keras.applications.xception.Xception(
+		input_shape=(imsize, imsize, 1),
+		pooling="avg", classes=num_classes, weights=None, include_top=False)
+
+	model = get_model_with_imagenet_weights(mnet_raw, freeze=False)
+	preprocess_input = keras.applications.xception.preprocess_input
+
+	return model , preprocess_input
+
+def get_exception_3d(imsize):
+	mnet_raw = keras.applications.xception.Xception(
+		input_shape=(imsize, imsize, 3),
+		pooling="avg", classes=num_classes, weights="imagenet", include_top=False)
+
+	model = get_model_with_imagenet_weights(mnet_raw, freeze=False)
+	preprocess_input = keras.applications.xception.preprocess_input
+
+	return model , preprocess_input
+
 
 def get_mnet_pretrained(imsize, freeze=True, alpha=1.0):
 	mnet_raw = MobileNetV2(
