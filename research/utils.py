@@ -62,7 +62,7 @@ from keras.backend.tensorflow_backend import set_session
 
 
 data_path ="/home/ubuntu/draw/data/"
-train_path = data_path+"train/"
+train_path = data_path+"train_simplified/"
 num_classes = 340 
 BASE_SIZE = 256
 NCATS = 340 
@@ -198,23 +198,36 @@ def draw_cv2(raw_strokes, size=256, lw=6, time_color=True):
 
 # @threadsafe_generator
 def image_generator_xd(size, batchsize, ks, lw=6, time_color=True, preprocess_input=None):
+	x_old , y_old= None, None
 	while True:
 		for k in np.random.permutation(ks):
 			print("k: ",k)
 			filename = os.path.join("../data/csv_gz", 'train_k{}.csv.gz'.format(k))
-			for df in pd.read_csv(filename, chunksize=batchsize):
-				df['drawing'] = df['drawing'].apply(json.loads)
-				x = np.zeros((len(df), size, size, 3))
-				for i, raw_strokes in enumerate(df.drawing.values):
-					x[i, :, :, 0] = draw_cv2(raw_strokes, size=size, lw=lw,
-											 time_color=True)
-					x[i, :, :, 1] = draw_cv2(raw_strokes, size=size, lw=lw,
-																	 time_color=False)
-					x[i, :, :, 2] = x[i, :, :, 1]																			 	
+			try:
+				for df in pd.read_csv(filename, chunksize=batchsize):
+					df['drawing'] = df['drawing'].apply(json.loads)
+					x = np.zeros((len(df), size, size, 3))
+					for i, raw_strokes in enumerate(df.drawing.values):
+						x[i, :, :, 0] = draw_cv2(raw_strokes, size=size, lw=lw,
+												 time_color=True)
+						x[i, :, :, 1] = draw_cv2(raw_strokes, size=size, lw=lw,
+																		 time_color=False)
+						x[i, :, :, 2] = x[i, :, :, 1]																			 	
 
-				x = preprocess_input(x).astype(np.float32)
-				y = keras.utils.to_categorical(df.y, num_classes=NCATS)
-				yield x, y
+					x = preprocess_input(x).astype(np.float32)
+					y = keras.utils.to_categorical(df.y, num_classes=NCATS)
+
+					x_old = x
+					y_old = y
+
+					yield x, y
+			except:
+				print('ERROR with k',k)
+				yield x_old, y_old
+				continue
+
+
+
 
 def df_to_image_array_xd( df, size, lw=6, time_color=True, preprocess_input=None):
 	df['drawing'] = df['drawing'].apply(json.loads)
@@ -228,23 +241,27 @@ def df_to_image_array_xd( df, size, lw=6, time_color=True, preprocess_input=None
 
 
 
-
-def image_generator_1d(size, batchsize, ks, lw=6, time_color=False, preprocess_input=None):
+def image_generator_1d(size, batchsize, ks, lw=6, time_color=True, preprocess_input=None):
 	while True:
 		for k in np.random.permutation(ks):
-			filename = os.path.join("../data/csv_gz", 'train_k{}.csv.gz'.format(k))
-			for df in pd.read_csv(filename, chunksize=batchsize):
-				df['drawing'] = df['drawing'].apply(json.loads)
-				x = np.zeros((len(df), size, size, 1))
-				for i, raw_strokes in enumerate(df.drawing.values):
-					x[i, :, :, 0] = draw_cv2(raw_strokes, size=size, lw=lw,
-											 time_color=time_color)																		 	
+			try:
+				print("Selected k",k)
+				filename = os.path.join("../data/csv_gz", 'train_k{}.csv.gz'.format(k))
+				for df in pd.read_csv(filename, chunksize=batchsize):
+					df['drawing'] = df['drawing'].apply(json.loads)
+					x = np.zeros((len(df), size, size, 1))
+					for i, raw_strokes in enumerate(df.drawing.values):
+						x[i, :, :, 0] = draw_cv2(raw_strokes, size=size, lw=lw,
+												 time_color=time_color)																		 	
 
-				x = preprocess_input(x).astype(np.float32)
-				y = keras.utils.to_categorical(df.y, num_classes=NCATS)
-				yield x, y
+					x = preprocess_input(x).astype(np.float32)
+					y = keras.utils.to_categorical(df.y, num_classes=NCATS)
+					yield x, y
+			except:
+				print('ERROR with k',k)
+				continue			
 
-def df_to_image_array_1d( df, size, lw=6, time_color=False, preprocess_input=None):
+def df_to_image_array_1d( df, size, lw=6, time_color=True, preprocess_input=None):
 	df['drawing'] = df['drawing'].apply(json.loads)
 	x = np.zeros((len(df), size, size, 1))
 	for i, raw_strokes in enumerate(df.drawing.values):

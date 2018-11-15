@@ -72,7 +72,7 @@ class GZ_experiment:
 		train_datagen = image_generator_xd(size=self.imsize, 
 			batchsize=self.batch_size, ks=range(NCSVS - 1),preprocess_input=self.preprocess_input)
 		self.model.fit_generator(train_datagen,
-			 steps_per_epoch=1024,
+			 steps_per_epoch=4096,
 			 epochs = 10000,
 			 validation_data = (x_valid, y_valid),
 			 callbacks = callbacks,
@@ -87,9 +87,9 @@ class GZ_experiment:
 		return t3
 
 	def get_callbacks(self, exp_name, batch_size):
-		reduceLROnPlat = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=10, cooldown=3, verbose=1,
+		reduceLROnPlat = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, cooldown=3, verbose=1,
 										   mode='auto', min_delta=0.005, min_lr=self.min_lr)
-		earlystop = EarlyStopping(monitor='val_top_3_accuracy', mode='max', patience=15) 
+		earlystop = EarlyStopping(monitor='val_top_3_accuracy', mode='max', patience=8) 
 		# earlystop = EarlyStopping(monitor='val_loss', mode='min', patience=5) 
 
 		exp_path = f'/home/ubuntu/draw/weights/{exp_name}.hdf5'
@@ -104,6 +104,30 @@ class GZ_experiment:
 		return callbacks
 
 
+	def predict(self):
+		last_model = sorted(glob(f"/home/ubuntu/draw/weights/{self.exp_name}*.hdf5"), 
+							  key=os.path.getmtime,reverse=True)   
+		if len(last_model) > 0:
+			last_model=last_model[0]
+		else:
+			print("Prediction error: model doesn't exist for the given exp_name")
+			return -1
+		
+		print (f"Predicting using model found in {last_model} ..")
+		model = keras.models.load_model(last_model,
+											 custom_objects={"top_3_accuracy":self.top_3_accuracy})        
+
+
+		test_df = pd.read_csv('/home/ubuntu/draw/data/test_simplified.csv')
+		test_gen = TestGenerator(test_df, self.batch_size, imsize=self.imsize, 
+													 preprocess_input=self.preprocess_input)     
+		
+		test_predictions = model.predict_generator(test_gen, 
+												   steps=len(test_gen), 
+												   verbose=1)
+		test_predictions = test_predictions[:test_df.shape[0]]
+		np.save(f"/home/ubuntu/draw/predictions/{self.exp_name}.npy",test_predictions)
+		
 
 
 
@@ -112,14 +136,13 @@ class GZ_experiment_1d(GZ_experiment):
 	def train(self, 
 			  model,
 			 continue_training=True,
-			 do_aug=False, 
 			 lr=None):
 		
 		self.model = model
 
 
 		print("loading valid df .. ")
-		valid_df = pd.read_csv(os.path.join(DP_DIR, 'train_k{}.csv.gz'.format(NCSVS - 1))) # nrows=140000
+		valid_df = pd.read_csv(os.path.join(DP_DIR, 'train_k{}.csv.gz'.format(NCSVS - 1)), nrows=80000) # 
 		x_valid = df_to_image_array_1d(valid_df, self.imsize,preprocess_input=self.preprocess_input)
 		y_valid = keras.utils.to_categorical(valid_df.y, num_classes=NCATS)
 		print(x_valid.shape, y_valid.shape)
@@ -158,23 +181,16 @@ class GZ_experiment_1d(GZ_experiment):
 
 		train_datagen = image_generator_1d(size=self.imsize, 
 			batchsize=self.batch_size, ks=range(NCSVS - 1),preprocess_input=self.preprocess_input)
+
 		self.model.fit_generator(train_datagen,
-			 steps_per_epoch=1024,
+			 steps_per_epoch=4096,
 			 epochs = 10000,
 			 validation_data = (x_valid, y_valid),
 			 callbacks = callbacks,
 			 verbose = 1, 
-			 workers=self.num_workers, 
+			 workers=1, #self.num_workers, 
 			 max_queue_size=100,
-			 use_multiprocessing=True) 	
-
-
-
-
-
-
-
-
+			 use_multiprocessing=False) 
 
 
 

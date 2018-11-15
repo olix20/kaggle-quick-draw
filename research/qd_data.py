@@ -355,3 +355,27 @@ class CNN2D_generator(BaseGenerator):
 		images = np.array([self.draw_it_3channel_infoplus(strokes) for strokes in batch_x])
 
 		return images, keras.utils.to_categorical(batch_y, num_classes)
+
+
+
+class TestGenerator(Sequence):
+
+	def __init__(self, 
+		df, 
+		batch_size, 
+		imsize, 
+		preprocess_input=None
+		):
+
+		self.df = df
+		self.batch_size = batch_size
+		self.imsize = imsize
+		self.preprocess_input = preprocess_input
+
+	def __len__(self):
+		return int(np.ceil(len(self.df) / float(self.batch_size)))	
+
+
+	def __getitem__(self, idx):
+		batch_x = self.df.iloc[idx * self.batch_size:(idx + 1) * self.batch_size].copy()
+		return df_to_image_array_xd(batch_x, self.imsize, preprocess_input=self.preprocess_input)
