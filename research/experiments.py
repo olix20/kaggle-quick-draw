@@ -4,6 +4,19 @@ from qd_data import *
 DP_DIR="../data/csv_gz"
 
 
+class SaveModelCbk(keras.callbacks.Callback):
+
+	def __init__(self, model, exp_name):
+		 self.model_to_save = model
+		 self.exp_name = exp_name
+
+	def on_epoch_end(self, epoch, logs=None):
+		path = f'/home/ubuntu/draw/weights/{self.exp_name}'
+		epoch_suffix = '_epoch_%d.hdf5' % epoch
+		self.model_to_save.save(path + epoch_suffix)
+
+
+
 class GZ_experiment:
 	def __init__(self, 
 				 imsize, 
@@ -26,19 +39,22 @@ class GZ_experiment:
 			  model,
 			 continue_training=True,
 			 do_aug=False, 
-			 lr=None):
+			 lr=None, 
+			 init_lr=1e-3,
+			 finetune=True):
 		
 		self.model = model
 
 
 		print("loading valid df .. ")
-		valid_df = pd.read_csv(os.path.join(DP_DIR, 'train_k{}.csv.gz'.format(NCSVS - 1)  ), nrows=140000) #
+		valid_df = pd.read_csv(os.path.join(DP_DIR, 'train_k{}.csv.gz'.format(NCSVS - 1)  ), nrows=70000) #
 		x_valid = df_to_image_array_xd(valid_df, self.imsize,preprocess_input=self.preprocess_input)
 		y_valid = keras.utils.to_categorical(valid_df.y, num_classes=NCATS)
 		print(x_valid.shape, y_valid.shape)
 		print('Validation array memory {:.2f} GB'.format(x_valid.nbytes / 1024.**3 ))
 
-		
+
+
 		# continue training from a broken run, this loads last state of optimizer too!
 		last_model = sorted(glob(f"/home/ubuntu/draw/weights/{self.exp_name}*.hdf5"), 
 			key=os.path.getmtime,reverse=True)		
@@ -50,15 +66,17 @@ class GZ_experiment:
 			last_model = last_model[0]
 			self.model = keras.models.load_model(last_model,
 												 custom_objects={"top_3_accuracy":self.top_3_accuracy})   
-		
+
+			print (self.model.summary())		
 			print (f"Found existing model: {last_model}")
 			print(f"Continuing training, new exp_name: {self.exp_name}")
 
 		else:
 			# important to put this under else condition otherwise learning rate will be reset
 			self.model.compile(loss='categorical_crossentropy',
-			  optimizer=Adam(lr=2e-3),
+			  optimizer=Adam(lr=init_lr),
 			  metrics=['accuracy', self.top_3_accuracy])   			
+
 
 		# override lr if specified
 		if lr:
@@ -68,12 +86,13 @@ class GZ_experiment:
 
 
 		callbacks = self.get_callbacks(self.exp_name, self.batch_size)
-
 		train_datagen = image_generator_xd(size=self.imsize, 
 			batchsize=self.batch_size, ks=range(NCSVS - 1),preprocess_input=self.preprocess_input)
+
+		
 		self.model.fit_generator(train_datagen,
-			 steps_per_epoch=4096,
-			 epochs = 10000,
+			 steps_per_epoch=1024,
+			 epochs = 2000,
 			 validation_data = (x_valid, y_valid),
 			 callbacks = callbacks,
 			 verbose = 1, 
@@ -87,9 +106,9 @@ class GZ_experiment:
 		return t3
 
 	def get_callbacks(self, exp_name, batch_size):
-		reduceLROnPlat = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, cooldown=3, verbose=1,
+		reduceLROnPlat = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=6, cooldown=3, verbose=1,
 										   mode='auto', min_delta=0.005, min_lr=self.min_lr)
-		earlystop = EarlyStopping(monitor='val_top_3_accuracy', mode='max', patience=8) 
+		earlystop = EarlyStopping(monitor='val_top_3_accuracy', mode='max', patience=10) 
 		# earlystop = EarlyStopping(monitor='val_loss', mode='min', patience=5) 
 
 		exp_path = f'/home/ubuntu/draw/weights/{exp_name}.hdf5'
@@ -130,6 +149,90 @@ class GZ_experiment:
 		
 
 
+class GZ_experiment_parallel(GZ_experiment):
+	def train(self, 
+			  model,
+			 continue_training=True,
+			 do_aug=False, 
+			 lr=None):
+		
+		self.model = model
+
+
+		print("loading valid df .. ")
+		valid_df = pd.read_csv(os.path.join(DP_DIR, 'train_k{}.csv.gz'.format(NCSVS - 1)  ), nrows=35000) #
+		x_valid = df_to_image_array_xd(valid_df, self.imsize,preprocess_input=self.preprocess_input)
+		y_valid = keras.utils.to_categorical(valid_df.y, num_classes=NCATS)
+		print(x_valid.shape, y_valid.shape)
+		print('Validation array memory {:.2f} GB'.format(x_valid.nbytes / 1024.**3 ))
+
+		
+		# continue training from a broken run, this loads last state of optimizer too!
+		last_model = sorted(glob(f"/home/ubuntu/draw/weights/{self.exp_name}*.hdf5"), 
+			key=os.path.getmtime,reverse=True)		
+
+		if continue_training and len(last_model) > 0:
+			# appending a token to indicate continued experiment
+			self.exp_name = self.exp_name + "x"*len(last_model)
+
+			last_model = last_model[0]
+			with tf.device("/cpu:0"):
+				self.model = keras.models.load_model(last_model,
+													 custom_objects={"top_3_accuracy":self.top_3_accuracy})   
+
+			print (f"Found existing model: {last_model}")
+			print(f"Continuing training, new exp_name: {self.exp_name}")
+
+
+
+		else:
+			# important to put this under else condition otherwise learning rate will be reset
+			with tf.device("/cpu:0"):
+				self.model.compile(loss='categorical_crossentropy',
+				  optimizer=Adam(lr=4e-3),
+				  metrics=['accuracy', self.top_3_accuracy])   			
+
+
+		if lr:
+			with tf.device("/cpu:0"):
+				self.model.compile(loss='categorical_crossentropy',
+				  optimizer=Adam(lr=lr),
+				  metrics=['accuracy', self.top_3_accuracy]) 
+
+
+		# ok now we have a running single model, try to parallalize
+
+		try:
+			self.parallel_model = multi_gpu_model(self.model, cpu_relocation=True)
+			# self.parallel_model.layers[-2].set_weights(self.model.get_weights())
+			print("Training using multiple GPUs..")
+
+		except ValueError:
+			self.parallel_model = self.model
+			print("Training using single GPU or CPU..")
+
+		self.parallel_model.compile(loss='categorical_crossentropy',
+		  optimizer=Adam(lr=self.model.optimizer.lr),
+		  metrics=['accuracy', self.top_3_accuracy]) 
+		
+		# self.parallel_model.__setattr__('callback_model',self.model)
+
+
+		callbacks = self.get_callbacks(self.exp_name, self.batch_size)
+		callbacks.append(SaveModelCbk(self.model,self.exp_name))
+
+		train_datagen = image_generator_xd(size=self.imsize, 
+			batchsize=self.batch_size, ks=range(NCSVS - 1),
+			preprocess_input=self.preprocess_input)
+
+		self.parallel_model.fit_generator(train_datagen,
+			 steps_per_epoch=512,
+			 epochs = 10000,
+			 validation_data = (x_valid, y_valid),
+			 callbacks = callbacks,
+			 verbose = 1, 
+			 max_queue_size=200) 
+		
 
 class GZ_experiment_1d(GZ_experiment):
 
@@ -376,16 +479,33 @@ class Experiment_Sample:
 
 
 
+		# if finetune and len(last_model)==0:
+		# 	print("finetuning top")
+		# 	self.model.fit_generator(train_datagen,
+		# 	 steps_per_epoch=512,
+		# 	 epochs = 5,
+		# 	 validation_data = (x_valid, y_valid),
+		# 	 callbacks = callbacks,
+		# 	 verbose = 1, 
+		# 	 workers=1, #self.num_workers, 
+		# 	 max_queue_size=100,
+		# 	 use_multiprocessing=False) 
 
-		# ok now we have at least a running single gpu model, try to parallalize
-		# try:
-		# 	self.parallel_model = multi_gpu_model(self.model, cpu_relocation=True)
-		# 	self.parallel_model.layers[-2].set_weights(self.model.get_weights())
-		# 	print("Training using multiple GPUs..")
 
-		# except ValueError:
-		# 	self.parallel_model = self.model
-		# 	print("Training using single GPU or CPU..")
+		# 		# unfreeze lower layers and retrain
+		# 	for layer in self.model.layers:
+		# 		layer.trainable = True				
+
+		# 	print(self.model.summary())
+		# 	print("Beginning tuning all layers .. ")
+
+		# 	self.model.compile(loss='categorical_crossentropy',
+		# 	  optimizer=Adam(lr=init_lr),
+		# 	  metrics=['accuracy', self.top_3_accuracy]) 		
+
+
+
+
 
 
 # class MultiGPUCheckpoint(ModelCheckpoint):

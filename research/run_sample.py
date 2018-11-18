@@ -12,17 +12,24 @@ def load_super_small_set():
 
 def cnn2d_3channel_test():
 	imsize=128	  
-	batch_size=256
+	batch_size=200
+
+	# try:
+	# 	num_gpus = str(subprocess.check_output(["nvidia-smi", "-L"])).count('UUID')
+	# except:
+	# 	num_gpus = 1 
+	num_gpus = 1
+	print("num gpus:", num_gpus)
 	# fold = 8 #np.random.choice( range(1,10))
 
-	name = "mnet14_real_1d"
+	name = "xception_real_3d"
 	exp_name = f"{name}_im{imsize}_batch{batch_size}"
 
 	# model = get_densenet_121_imagenet(imsize)
 	# model = get_incresnetv2_imagenet(imsize)
 	# model = get_multi_branch_mobilenet_crnn1d(imsize)
 	# get_resnet_imagenet
-	model, preprocess_input = get_mnet_1d(imsize)
+	model, preprocess_input = get_exception_3d(imsize)
 	# del model
 	# train_df, valid_df = load_super_small_set()
 	# train_df, valid_df = load_sample_set()
@@ -30,18 +37,17 @@ def cnn2d_3channel_test():
 
 	print(f"Beginning training for {exp_name}")
 
-	# exp = Experiment_Sample(imsize, batch_size, exp_name,
+	# exp = Experiment_Sample(imsize, batch_size*num_gpus, exp_name,
 	#  data_generator=CNN2D_generator, 
 	#  preprocess_input=preprocess_input, 
 	#  num_workers=os.cpu_count(),
 	#  min_lr=1e-4) 
 	
-	exp = GZ_experiment_1d(imsize, batch_size, exp_name,
+	exp = GZ_experiment(imsize, batch_size*num_gpus, exp_name,
 	 preprocess_input=preprocess_input, 
-	 num_workers=os.cpu_count(),
 	 min_lr=2e-5) 
 
-	exp.train(model,continue_training=True)
+	exp.train(model,continue_training=True, init_lr=2e-3)
 
 
 

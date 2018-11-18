@@ -1,11 +1,11 @@
 from utils import *
 
-def get_mnet_1d(imsize, alpha=1.4):
+def get_mnet_1d(imsize, alpha=1.4, freeze=False):
 	mnet_raw = MobileNetV2(
 		input_shape=(imsize, imsize, 1), alpha=alpha,
 		pooling="max", classes=num_classes, weights=None, include_top=False)
 
-	model = get_model_with_imagenet_weights(mnet_raw, freeze=False)
+	model = get_model_with_imagenet_weights(mnet_raw, freeze=freeze)
 	preprocess_input = keras.applications.mobilenet_v2.preprocess_input
 
 	return model , preprocess_input
@@ -24,7 +24,7 @@ def get_exception_1d(imsize):
 def get_exception_3d(imsize):
 	mnet_raw = keras.applications.xception.Xception(
 		input_shape=(imsize, imsize, 3),
-		pooling="avg", classes=num_classes, weights="imagenet", include_top=False)
+		pooling="max", classes=num_classes, weights="imagenet", include_top=False)
 
 	model = get_model_with_imagenet_weights(mnet_raw, freeze=False)
 	preprocess_input = keras.applications.xception.preprocess_input
@@ -66,7 +66,7 @@ def get_incresnetv2_imagenet(imsize, freeze=True):
 	return model, preprocess_input
 
 
-def get_densenet_121_imagenet(imsize, freeze=True):
+def get_densenet_121_imagenet(imsize, freeze=False):
 	densenet_raw = keras.applications.densenet.DenseNet121(input_shape=(imsize, imsize, 3), 
 		include_top=False, pooling="max", 
 	  weights="imagenet", classes=num_classes)
